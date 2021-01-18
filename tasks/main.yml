@@ -1,1 +1,25 @@
 ---
+- include_tasks: single-deploy.yml
+
+- name: Get Alertmanager 0 Pod Infra Container
+  containers.podman.podman_pod_info:
+    name: '{{ alertmanager_hostname }}-0-pod'
+  register: pod_info
+  
+- set_fact:
+    alertmanager_0_infra_id: '{{ pod_info.pods[0].InfraContainerID  }}'
+
+- name: Get Infra Container info
+  containers.podman.podman_container_info:
+    name: '{{ alertmanager_0_infra_id }}'
+  register: container_info
+
+- set_fact:
+    alertmanager_0_pod_ip: '{{ container_info | json_query(query) }}'
+  vars:
+    query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
+
+- debug:
+    msg:
+    - '{{ alertmanager_hostname }}-0 pod IP: {{ alertmanager_0_pod_ip }}'
+  when: not alertmanager_ha_pair

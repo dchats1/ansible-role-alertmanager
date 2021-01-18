@@ -1,0 +1,53 @@
+---
+- name: Create Alertmanager data volume
+  containers.podman.podman_volume:
+    name: '{{ alertmanager_hostname }}-0-data-volume'
+    state: present
+    label:
+      app: alertmanager
+
+- name: Create Alertmanager configuration directory
+  file:
+    path: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/'
+    mode: '0775'
+    state: directory
+
+- name: Create pid file directory
+  file:
+    path: '{{ alertmanager_base_dir }}/pids/'
+    mode: '0775'
+    state: directory
+
+- name: Generate Alertmanager configuration file
+  template:
+    src: alertmanager.yml
+    dest: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml'
+    mode: '0644'
+#  notify:
+#    - Restart Alertmanager
+
+- name: Set nginx proxy config
+  template:
+    src: alertmanager-proxy.conf
+    dest: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager-proxy.conf'
+    mode: '0644'
+#  notify:
+#    - Restart Proxy
+
+- name: Create Alertmanager Pod
+  containers.podman.podman_pod:
+    name: '{{ alertmanager_hostname }}-0-pod'
+    state: started
+    network: '{{ alertmanager_podman_network }}'
+    hostname: '{{ alertmanager_hostname }}-0.{{ alertmanager_domain }}'
+
+- name: Run Alertmanager container
+  containers.podman.podman_container:
+    name: '{{ alertmanager_hostname }}-0'
+    image: 'quay.io/prometheus/alertmanager:v{{ alertmanager_version }}'
+    pod: '{{ alertmanager_hostname }}-0-pod'
+    conmon_pidfile: '{{ alertmanager_base_dir }}/pids/{{ alertmanager_hostname }}-0.pid'
+    volume:
+      - '{{ alertmanager_hostname }}-0-data-volume:/alertmanager'
+      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:Z'
+    command: '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }} --config.file=/etc/alertmanager/alertmanager.yml'

@@ -1,0 +1,14 @@
+{% if alertmanager_global_config | length > 0 %}
+global:
+  {{ alertmanager_global_config | indent(2) }}
+{% endif %}
+
+{% if alertmanager_route_config | length > 0 %}
+route:
+  {{ alertmanager_route_config | indent(2) }}
+{% endif %}
+
+{% if alertmanager_receivers_config | length > 0 %}
+receivers:
+  {{ alertmanager_receivers_config | indent(2) }}
+{% endif %}

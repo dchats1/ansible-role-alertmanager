@@ -4,5 +4,29 @@ alertmanager_base_dir: /var/lib/containers
 alertmanager_podman_network: podman
 alertmanager_hostname: alertmanager
 alertmanager_domain: example.com
-alertmanager_listen_port: 9093
+alertmanager_web_listen_port: 9093
+alertmanager_cluster_listen_port: 9094
 alertmanager_ha_pair: false
+
+alertmanager_global_config: []
+#alertmanager_global_config: |
+#  smtp_smarthost: 'localhost:25'
+#  smtp_from: 'alertmanager@example.com'
+
+alertmanager_route_config: []
+#alertmanager_route_config: |
+#  receiver: 'example-email'
+#  group_by: [prometheus_cluster]
+#  group_wait: 30s
+#  group_interval: 5m
+#  repeat_interal: 3h
+#  routes:
+#  - match:
+#      severity: critial
+#    receiver: example-email
+
+alertmanager_receivers_config: []
+#alertmanager_receivers_config: |
+#  - name: 'example-email'
+#    email_configs:
+#    - to: 'my-team-alerts@example.com'
