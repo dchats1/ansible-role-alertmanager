@@ -1,2 +1,8 @@
 ---
-# defaults file for alertmanager
+alertmanager_version: 0.21.0
+alertmanager_base_dir: /var/lib/containers
+alertmanager_podman_network: podman
+alertmanager_hostname: alertmanager
+alertmanager_domain: example.com
+alertmanager_listen_port: 9093
+alertmanager_ha_pair: false
