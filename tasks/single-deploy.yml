@@ -49,5 +49,20 @@
     conmon_pidfile: '{{ alertmanager_base_dir }}/pids/{{ alertmanager_hostname }}-0.pid'
     volume:
       - '{{ alertmanager_hostname }}-0-data-volume:/alertmanager'
-      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:Z'
+      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:z'
     command: '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }} --config.file=/etc/alertmanager/alertmanager.yml'
+
+- name: Run Nginx Proxy container
+  containers.podman.podman_container:
+    name: '{{ alertmanager_hostname }}-proxy-0'
+    image: docker.io/library/nginx:latest
+    pod: '{{ alertmanager_hostname }}-0-pod'
+    conmon_pidfile: '{{ alertmanager_base_dir }}/pids/{{ alertmanager_hostname }}-proxy-0.pid'
+    volume:
+      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager-proxy.conf:/etc/nginx/conf.d/default.conf:z'
+
+- name: Generate systemd unit files
+  include_tasks: systemd.yml
+  loop:
+    - '{{ alertmanager_hostname }}-0'
+    - '{{ alertmanager_hostname }}-proxy-0'
