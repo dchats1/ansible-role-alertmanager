@@ -1,5 +1,11 @@
 ---
-- include_tasks: single-deploy.yml
+# Create pods first to get cluster peer IP
+- name: Create Alertmanager Pod
+  containers.podman.podman_pod:
+    name: '{{ alertmanager_hostname }}-0-pod'
+    state: started
+    network: '{{ alertmanager_podman_network }}'
+    hostname: '{{ alertmanager_hostname }}-0.{{ alertmanager_domain }}'
 
 - name: Get Alertmanager 0 Pod Infra Container
   containers.podman.podman_pod_info:
@@ -18,6 +24,79 @@
     alertmanager_0_pod_ip: '{{ container_info | json_query(query) }}'
   vars:
     query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
+
+- name: Set pod for second node
+  block:
+
+  - name: Create Second Alertmanager Pod
+    containers.podman.podman_pod:
+      name: '{{ alertmanager_hostname }}-1-pod'
+      state: started
+      network: '{{ alertmanager_podman_network }}'
+      hostname: '{{ alertmanager_hostname }}-1.{{ alertmanager_domain }}'
+
+  - name: Get Alertmanager 1 Pod Infra Container
+    containers.podman.podman_pod_info:
+      name: '{{ alertmanager_hostname }}-1-pod'
+    register: pod_info
+    
+  - set_fact:
+      alertmanager_1_infra_id: '{{ pod_info.pods[0].InfraContainerID  }}'
+  
+  - name: Get Infra Container info
+    containers.podman.podman_container_info:
+      name: '{{ alertmanager_1_infra_id }}'
+    register: container_info
+  
+  - set_fact:
+      alertmanager_0_pod_ip: '{{ container_info | json_query(query) }}'
+    vars:
+      query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
+  
+  when: alertmanager_ha_pair
+
+# Set command line flags
+- set_fact:
+    alertmanager_0_flags: '{{ alertmanager_0_flags|default([]) + [ item ] }}'
+  loop: '{{ alertmanager_flags }}'
+  when: not alertmanager_ha_pair
+
+# Flags for alertmanager 0
+- set_fact:
+    alertmanager_0_flags: '{{ alertmanager_0_flags|default([]) + [ item ] }}'
+  loop:
+    - '{{ alertmanager_flags }}'
+    - '--cluster.listen-address=0.0.0.0:{{ alertmanager_cluster_listen_port }}'
+    - '--cluster.peer={{ alertmanager_1_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
+  when: alertmanager_ha_pair
+
+- set_fact:
+    alertmanager_0_flags: '{{ alertmanager_0_flags | join(" ") }}'
+
+# Flags for alertmanager 1
+- set_fact:
+    alertmanager_1_flags: '{{ alertmanager_1_flags|default([]) + [ item ] }}'
+  loop:
+    - '{{ alertmanager_flags }}'
+    - '--cluster.listen-address=0.0.0.0:{{ alertmanager_cluster_listen_port }}'
+    - '--cluster.peer={{ alertmanager_0_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
+  when: alertmanager_ha_pair
+
+- set_fact:
+    alertmanager_1_flags: '{{ alertmanager_1_flags | join(" ") }}'
+  when: alertmanager_ha_pair
+
+- debug:
+    msg: 'Alertmanager 0: {{ alertmanager_0_flags }}'
+
+- debug:
+    msg: 'Alertmanager 1: {{ alertmanager_1_flags }}'
+  when: alertmanager_ha_pair
+
+- include_tasks: single-deploy.yml
+
+- include_tasks: ha-deploy.yml
+  when: alertmanager_ha_pair
 
 - debug:
     msg:

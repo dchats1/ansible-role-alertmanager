@@ -7,6 +7,10 @@ alertmanager_domain: example.com
 alertmanager_web_listen_port: 9093
 alertmanager_cluster_listen_port: 9094
 alertmanager_ha_pair: false
+alertmanager_flags:
+  - --web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }}
+  - --config.file=/etc/alertmanager/alertmanager.yml
+  - --storage.path=/alertmanager
 
 alertmanager_global_config: []
 #alertmanager_global_config: |
