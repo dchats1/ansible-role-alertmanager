@@ -43,7 +43,7 @@
     volume:
       - '{{ alertmanager_hostname }}-0-data-volume:/alertmanager'
       - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:z'
-    command: '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }} --config.file=/etc/alertmanager/alertmanager.yml'
+    command: '{{ alertmanager_0_flags }}'
 
 - name: Run Nginx Proxy container
   containers.podman.podman_container:

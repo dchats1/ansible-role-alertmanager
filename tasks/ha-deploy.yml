@@ -6,26 +6,6 @@
     label:
       app: alertmanager
 
-- name: Create Alertmanager configuration directory
-  file:
-    path: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/'
-    mode: '0775'
-    state: directory
-
-- name: Create pid file directory
-  file:
-    path: '{{ alertmanager_base_dir }}/pids/'
-    mode: '0775'
-    state: directory
-
-- name: Generate Alertmanager configuration file
-  template:
-    src: alertmanager.yml
-    dest: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml'
-    mode: '0644'
-#  notify:
-#    - Restart Alertmanager
-
 - name: Set nginx proxy config
   template:
     src: alertmanager-proxy.conf
@@ -33,13 +13,6 @@
     mode: '0644'
 #  notify:
 #    - Restart Proxy
-
-- name: Create Alertmanager Pod
-  containers.podman.podman_pod:
-    name: '{{ alertmanager_hostname }}-1-pod'
-    state: started
-    network: '{{ alertmanager_podman_network }}'
-    hostname: '{{ alertmanager_hostname }}-1.{{ alertmanager_domain }}'
 
 - name: Run Alertmanager container
   containers.podman.podman_container:
@@ -50,7 +23,7 @@
     volume:
       - '{{ alertmanager_hostname }}-1-data-volume:/alertmanager'
       - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:z'
-    command: '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }} --config.file=/etc/alertmanager/alertmanager.yml'
+    command: '{{ alertmanager_1_flags }}'
 
 - name: Run Nginx Proxy container
   containers.podman.podman_container:

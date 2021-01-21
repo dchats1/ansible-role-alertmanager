@@ -1,6 +1,6 @@
 ---
 # Create pods first to get cluster peer IP
-- name: Create Alertmanager Pod
+- name: Create Alertmanager 0 Pod
   containers.podman.podman_pod:
     name: '{{ alertmanager_hostname }}-0-pod'
     state: started
@@ -49,7 +49,7 @@
     register: container_info
   
   - set_fact:
-      alertmanager_0_pod_ip: '{{ container_info | json_query(query) }}'
+      alertmanager_1_pod_ip: '{{ container_info | json_query(query) }}'
     vars:
       query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
   
@@ -65,7 +65,7 @@
 - set_fact:
     alertmanager_0_flags: '{{ alertmanager_0_flags|default([]) + [ item ] }}'
   loop:
-    - '{{ alertmanager_flags }}'
+    - '{{ alertmanager_flags | join(" ") }}'
     - '--cluster.listen-address=0.0.0.0:{{ alertmanager_cluster_listen_port }}'
     - '--cluster.peer={{ alertmanager_1_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
   when: alertmanager_ha_pair
@@ -77,7 +77,7 @@
 - set_fact:
     alertmanager_1_flags: '{{ alertmanager_1_flags|default([]) + [ item ] }}'
   loop:
-    - '{{ alertmanager_flags }}'
+    - '{{ alertmanager_flags | join(" ") }}'
     - '--cluster.listen-address=0.0.0.0:{{ alertmanager_cluster_listen_port }}'
     - '--cluster.peer={{ alertmanager_0_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
   when: alertmanager_ha_pair
@@ -101,4 +101,8 @@
 - debug:
     msg:
     - '{{ alertmanager_hostname }}-0 pod IP: {{ alertmanager_0_pod_ip }}'
-  when: not alertmanager_ha_pair
+
+- debug:
+    msg:
+    - '{{ alertmanager_hostname }}-1 pod IP: {{ alertmanager_1_pod_ip }}'
+  when: alertmanager_ha_pair
