@@ -1,31 +1,72 @@
-Role Name
+Alertmanager
 =========
 
-A brief description of the role goes here.
+Deploy Alertmanager in podman containers in as a single instance or HA pair. https://prometheus.io/docs/alerting/latest/alertmanager/
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+This requires the containers.podman collection: https://galaxy.ansible.com/containers/podman Recommended 1.4.1 or later
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Variable                           | Description
+-----------------------------------|-------------------
+alertmanager_version               | Version of Alertmanager. (Default: 0.21.0)
+alertmanager_base_dir              | Directory to store alert manager configs. (Defaults: /var/lib/containers)
+alertmanager_podman_network        | Podman network to deploy containers. (Default: podman)
+alertmanager_hostname              | Short hostname for pods. (Default: alertmanager)
+alertmanager_domain                | Domain name for pods. (Default: example.com)
+alertmanager_web_listen_port       | Port for --web.listen-address (Default: 9093)
+alertmanager_cluster_listen_port   | Port for --cluster.listen-address (Default: 9094)
+alertmanager_ha_pair               | Deploy alertmanager as a HA pair. (Default: false)
+alertmanager_flags                 | Flags to pass to alert manager. (Default: [ '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }}', '--config.file=/etc/alertmanager/alertmanager.yml', '--storage.path=/alertmanager'] )
+alertmanager_global_config         | Global config. See example in comments and down below.
+alertmanager_route_config          | Route config. See example in comments and down below.
+alertmanager_receivers_config      | Receivers config. See example in comments and down below.
+
+```
+alertmanager_global_config: []
+#alertmanager_global_config: |
+#  smtp_smarthost: 'localhost:25'
+#  smtp_from: 'alertmanager@example.com'
+```
+
+```
+alertmanager_route_config: []
+#alertmanager_route_config: |
+#  receiver: 'example-email'
+#  group_by: [prometheus_cluster]
+#  group_wait: 30s
+#  group_interval: 5m
+#  repeat_interal: 3h
+#  routes:
+#  - match:
+#      severity: critial
+#    receiver: example-email
+```
+
+```
+alertmanager_receivers_config: []
+#alertmanager_receivers_config: |
+#  - name: 'example-email'
+#    email_configs:
+#    - to: 'my-team-alerts@example.com'
+```
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+No dependencies at this time
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+```
+- hosts: podman_host
+  roles:
+    - alertmanager
 
 License
 -------
@@ -35,4 +76,5 @@ BSD
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+David Chatterton
+david@davidchatterton.com
