@@ -11,8 +11,9 @@
   containers.podman.podman_pod_info:
     name: '{{ alertmanager_hostname }}-0-pod'
   register: pod_info
-  
-- set_fact:
+
+- name: Get first alertmanager pod infra container ID
+  set_fact:
     alertmanager_0_infra_id: '{{ pod_info.pods[0].InfraContainerID  }}'
 
 - name: Get Infra Container info
@@ -20,7 +21,8 @@
     name: '{{ alertmanager_0_infra_id }}'
   register: container_info
 
-- set_fact:
+- name: Get first alertmanager pod IP
+  set_fact:
     alertmanager_0_pod_ip: '{{ container_info | json_query(query) }}'
   vars:
     query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
@@ -39,30 +41,32 @@
     containers.podman.podman_pod_info:
       name: '{{ alertmanager_hostname }}-1-pod'
     register: pod_info
-    
-  - set_fact:
+
+  - name: Get second alertmanager pod infra container ID
+    set_fact:
       alertmanager_1_infra_id: '{{ pod_info.pods[0].InfraContainerID  }}'
-  
+
   - name: Get Infra Container info
     containers.podman.podman_container_info:
       name: '{{ alertmanager_1_infra_id }}'
     register: container_info
-  
-  - set_fact:
+
+  - name: Get second alertmanager pod IP
+    set_fact:
       alertmanager_1_pod_ip: '{{ container_info | json_query(query) }}'
     vars:
       query: 'containers[0].NetworkSettings.Networks.{{ alertmanager_podman_network }}.IPAddress'
-  
+
   when: alertmanager_ha_pair
 
-# Set command line flags
-- set_fact:
+- name: Create flags for first alertmanager
+  set_fact:
     alertmanager_0_flags: '{{ alertmanager_0_flags|default([]) + [ item ] }}'
   loop: '{{ alertmanager_flags }}'
   when: not alertmanager_ha_pair
 
-# Flags for alertmanager 0
-- set_fact:
+- name: Create flags for second alertmanager
+  set_fact:
     alertmanager_0_flags: '{{ alertmanager_0_flags|default([]) + [ item ] }}'
   loop:
     - '{{ alertmanager_flags | join(" ") }}'
@@ -70,11 +74,12 @@
     - '--cluster.peer={{ alertmanager_1_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
   when: alertmanager_ha_pair
 
-- set_fact:
+- name: Set flags for first alertmanager
+  set_fact:
     alertmanager_0_flags: '{{ alertmanager_0_flags | join(" ") }}'
 
-# Flags for alertmanager 1
-- set_fact:
+- name: Create flags for second alertmanager
+  set_fact:
     alertmanager_1_flags: '{{ alertmanager_1_flags|default([]) + [ item ] }}'
   loop:
     - '{{ alertmanager_flags | join(" ") }}'
@@ -82,7 +87,8 @@
     - '--cluster.peer={{ alertmanager_0_pod_ip }}:{{ alertmanager_cluster_listen_port }}'
   when: alertmanager_ha_pair
 
-- set_fact:
+- name: Set flags for second alertmanager
+  set_fact:
     alertmanager_1_flags: '{{ alertmanager_1_flags | join(" ") }}'
   when: alertmanager_ha_pair
 

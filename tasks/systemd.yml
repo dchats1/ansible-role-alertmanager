@@ -1,11 +1,11 @@
 ---
 - name: Generate systemd unit content
-  shell: 'podman generate systemd {{ item }} -n --restart-policy on-failure -t 120 | tail -n +5'
+  shell: 'set -o pipefail && podman generate systemd {{ item }} -n --restart-policy on-failure -t 120 | tail -n +5'
   changed_when: False
   register: systemd
 - name: Create unit file
   copy:
-    content: '{{systemd.stdout }}'
+    content: '{{ systemd.stdout }}'
     dest: '/etc/systemd/system/container-{{ item }}.service'
     owner: root
     group: root
@@ -18,4 +18,4 @@
     name: 'container-{{ item }}.service'
     state: started
     enabled: yes
-  when: unit_file.changed == false
+  when: not unit_file.changed
