@@ -1,0 +1,76 @@
+---
+- name: Create Alertmanager data volume
+  containers.podman.podman_volume:
+    name: '{{ alertmanager_hostname }}-{{ item }}-data-volume'
+    state: present
+    label:
+      app: alertmanager
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Create Alertmanager configuration directory
+  file:
+    path: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/'
+    mode: '0775'
+    state: directory
+
+- name: Create pid file directory
+  file:
+    path: '{{ alertmanager_base_dir }}/pids/'
+    mode: '0775'
+    state: directory
+
+- name: Generate Alertmanager configuration file
+  template:
+    src: alertmanager.yml
+    dest: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml'
+    mode: '0644'
+  notify:
+    - Restart Alertmanager
+
+- name: Set nginx proxy config
+  template:
+    src: alertmanager-proxy.conf
+    dest: '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager-proxy.conf'
+    mode: '0644'
+  notify:
+    - Restart Alertmanager Proxy
+
+- name: Run Alertmanager container
+  containers.podman.podman_container:
+    name: '{{ alertmanager_hostname }}-{{ item }}'
+    image: 'quay.io/prometheus/alertmanager:v{{ alertmanager_version }}'
+    pod: '{{ alertmanager_hostname }}-{{ item }}-pod'
+    conmon_pidfile: '{{ alertmanager_base_dir }}/pids/{{ alertmanager_hostname }}-{{ item }}.pid'
+    volume:
+      - '{{ alertmanager_hostname }}-{{ item }}-data-volume:/alertmanager'
+      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:z'
+    command: '{{ alertmanager_flags }}'
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Run Nginx Proxy container
+  containers.podman.podman_container:
+    name: '{{ alertmanager_hostname }}-proxy-{{ item }}'
+    image: docker.io/library/nginx:latest
+    pod: '{{ alertmanager_hostname }}-{{ item }}-pod'
+    conmon_pidfile: '{{ alertmanager_base_dir }}/pids/{{ alertmanager_hostname }}-proxy-{{ item }}.pid'
+    volume:
+      - '{{ alertmanager_base_dir }}/{{ alertmanager_hostname }}-config/alertmanager-proxy.conf:/etc/nginx/conf.d/default.conf:z'
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Generate list of alertmanager systemd units
+  set_fact:
+    alertmanager_systemd_units: '{{ systemd_units|default([]) + [ alertmanager_hostname + "-" + item|string ] }}'
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Generate list of alertmanager proxy systemd units
+  set_fact:
+    alertmanager_proxy_systemd_units: '{{ systemd_units|default([]) + [ alertmanager_hostname + "-proxy-" + item|string ] }}'
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Combine systemd units var
+  set_fact:
+    systemd_units: '{{ alertmanager_systemd_units + alertmanager_proxy_systemd_units }}'
+
+- name: Generate systemd unit files
+  include_tasks: systemd.yml
+  loop: '{{ systemd_units }}'

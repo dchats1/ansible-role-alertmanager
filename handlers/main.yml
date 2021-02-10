@@ -2,3 +2,17 @@
 - name: daemon-reload
   systemd:
     daemon_reload: yes
+
+- name: Restart Alertmanager
+  systemd:
+    name: '{{ alertmanager_hostname }}-{{ item }}'
+    state: restarted
+    enabled: yes
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'
+
+- name: Restart Alertmanager Proxy
+  systemd:
+    name: '{{ alertmanager_hostname }}-proxy-{{ item }}'
+    state: restarted
+    enabled: yes
+  loop: '{{ range(0, alertmanager_ha_replicas)|list }}'

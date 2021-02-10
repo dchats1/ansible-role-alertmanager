@@ -20,7 +20,7 @@ alertmanager_hostname              | Short hostname for pods. (Default: alertman
 alertmanager_domain                | Domain name for pods. (Default: example.com)
 alertmanager_web_listen_port       | Port for --web.listen-address (Default: 9093)
 alertmanager_cluster_listen_port   | Port for --cluster.listen-address (Default: 9094)
-alertmanager_ha_pair               | Deploy alertmanager as a HA pair. (Default: false)
+alertmanager_ha_replicas           | Number of alertmanager replicas. (Default: 1)
 alertmanager_flags                 | Flags to pass to alert manager. (Default: [ '--web.listen-address=0.0.0.0:{{ alertmanager_web_listen_port }}', '--config.file=/etc/alertmanager/alertmanager.yml', '--storage.path=/alertmanager'] )
 alertmanager_global_config         | Global config. See example in comments and down below.
 alertmanager_route_config          | Route config. See example in comments and down below.
